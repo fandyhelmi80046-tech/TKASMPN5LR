@@ -715,8 +715,9 @@ function parseQ(txt) {
   txt.split(/\r?\n/).forEach(l => {
     l = l.trim(); if (!l) return; let m;
     if (m = l.match(/^(?:kunci|jawaban)\s*[:=]\s*([A-Da-d])/i)) { if (c) c.a = "abcd".indexOf(m[1].toLowerCase()); }
+    else if (m = l.match(/^gambar\s*[:=]\s*(.+)/i)) { if (c) c.g = m[1].trim(); }
     else if (m = l.match(/^([A-Da-d])[\.\)]\s+(.+)/)) { if (c) c.o.push(m[2]); }
-    else if (m = l.match(/^\d+[\.\)]\s+(.+)/)) { fl(); c = { t: m[1], o: [], a: -1 }; }
+    else if (m = l.match(/^\d+[\.\)]\s+(.+)/)) { fl(); c = { t: m[1], o: [], a: -1, g: "" }; }
     else if (c && !c.o.length) c.t += " " + l;
   }); fl(); return out;
 }
@@ -812,8 +813,8 @@ function act(a, i) {
       break;
     }
     case "simp": dlg('<h3>Impor soal</h3><p class="mu">Format: nomor soal, opsi A sampai D, lalu baris "Kunci: B".</p><div class="fg"><label>Mata pelajaran</label><input id="a_m" list="a_dl"><datalist id="a_dl">' + mapels().map(m => '<option value="' + esc(m) + '">').join("") + '</datalist><label>Topik</label><input id="a_t"><label>Paket</label><select id="a_p">' + [1, 2, 3, 4].map(p => '<option>' + p + '</option>').join("") + '</select><label>Google Formulir (tautan)</label><div class="bar" style="margin:0;flex-wrap:nowrap"><input id="a_gf" placeholder="https://docs.google.com/forms/d/..."><button class="b" data-a="gfi" style="white-space:nowrap">Ambil soal</button></div>' + fileBox.replace(".docx,.txt,.csv", ".docx,.pdf,.txt").replace("(.docx atau .txt)", "(.docx, .pdf, atau .txt)") + '</div><p id="a_msg" class="mu"></p>' + btns("sisv")); $("a_f").onchange = readF; break;
-    case "sisv": { const m = gv("a_m"); if (!m) { $("a_msg").textContent = "Isi mata pelajaran dulu."; return; } const L = parseQ($("a_ta").value); if (!L.length) { $("a_msg").textContent = "Tidak ada soal yang terbaca."; return; } L.forEach(q => DB.soal.push({ id: uid(), mapel: m, topik: gv("a_t") || "-", paket: +gv("a_p"), s: "", g: "", t: q.t, o: q.o, a: q.a, tp: "pg" })); done(); break; }
-    case "gfi": { const u = gv("a_gf"), m = $("a_msg"); if (!u) return; m.textContent = "Mengambil soal..."; rpc("importForm", SES, u).then(r => { $("a_ta").value = r.q.map((q, k) => (k + 1) + ". " + q.t + "\n" + q.o.map((o, j) => "ABCD"[j] + ". " + o).join("\n") + "\nKunci: " + "ABCD"[q.a]).join("\n"); m.textContent = r.q.length + " soal diambil" + (r.skip ? ", " + r.skip + " dilewati" : "") + "."; }).catch(er => { m.textContent = "Gagal: " + (er && er.message || er); }); break; }
+    case "sisv": { const m = gv("a_m"); if (!m) { $("a_msg").textContent = "Isi mata pelajaran dulu."; return; } const L = parseQ($("a_ta").value); if (!L.length) { $("a_msg").textContent = "Tidak ada soal yang terbaca."; return; } L.forEach(q => DB.soal.push({ id: uid(), mapel: m, topik: gv("a_t") || "-", paket: +gv("a_p"), s: "", g: q.g || "", t: q.t, o: q.o, a: q.a, tp: "pg" })); done(); break; }
+    case "gfi": { const u = gv("a_gf"), m = $("a_msg"); if (!u) return; m.textContent = "Mengambil soal & gambar..."; rpc("importForm", SES, u).then(r => { $("a_ta").value = r.q.map((q, k) => (k + 1) + ". " + q.t + "\n" + q.o.map((o, j) => "ABCD"[j] + ". " + o).join("\n") + "\nKunci: " + "ABCD"[q.a] + (q.g ? "\nGambar: " + q.g : "")).join("\n"); const jmlGbr = r.q.filter(x => x.g).length; m.textContent = r.q.length + " soal diambil (" + jmlGbr + " bergambar)" + (r.skip ? ", " + r.skip + " dilewati" : "") + "."; }).catch(er => { m.textContent = "Gagal: " + (er && er.message || er); }); break; }
     case "eadd": dlg('<h3>Tambah ujian</h3><div class="fg"><label>Mata pelajaran</label><select id="a_m">' + opts(mapels()) + '</select><label>Paket</label><select id="a_p">' + [1, 2, 3, 4].map(p => '<option>' + p + '</option>').join("") + '</select><label>Durasi (menit)</label><input id="a_d" type="number" value="75"></div>' + btns("esv")); break;
     case "esv": DB.ujian.push({ id: uid(), mapel: gv("a_m"), paket: +gv("a_p"), aktif: false, acak: true, token: "", menit: +gv("a_d") || 75 }); done(); break;
     case "eac": { const e = DB.ujian.find(x => x.id === i); e.acak = e.acak === false; done(); break; }
