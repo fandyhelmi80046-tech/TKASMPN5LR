@@ -156,9 +156,12 @@ th{background:var(--fl);font-weight:600}.ac{white-space:nowrap}
 .badge-tp{display:inline-block;font-size:10.5px;font-weight:600;padding:2px 7px;border-radius:4px;background:#e0f2fe;color:#0369a1}
 .badge-tp.pgk{background:#fef3c7;color:#b45309}
 .badge-tp.bs{background:#dcfce7;color:#15803d}
+.badge-tp.rd{background:#fee2e2;color:#b91c1c}
+.pbar{background:#e2e8f0;border-radius:99px;height:8px;width:100%;min-width:70px;overflow:hidden}
+.pbar div{height:100%;border-radius:99px;transition:width .25s}
 #dm{max-width:600px;max-height:92vh;overflow:auto}
 @media (max-width:760px){.adm{grid-template-columns:1fr}.side{flex-direction:row;flex-wrap:wrap}}
-@media print{#ttl{display:none}.cards{grid-template-columns:1fr 1fr}.kt{background:#fff;color:#000;border-color:#000}.side,.noprint{display:none!important}.adm{display:block}.cont{padding:0}body,table{background:#fff;color:#000}}
+@media print{#ttl{display:none}.cards{grid-template-columns:1fr 1fr}.kt{background:#fff;color:#000;border-color:#000}.side,.noprint{display:none!important}.adm{display:block}.cont{padding:0}body,table{background:#fff;color:#000}.pbar{border:1px solid #999}}
 </style>
 </head>
 <body class="st">
@@ -279,11 +282,10 @@ th{background:var(--fl);font-weight:600}.ac{white-space:nowrap}
 <dialog id="dl2"><b>Petunjuk & Informasi Soal</b><div id="ii" style="margin-top:10px;line-height:1.6"></div><div class="sd"><button class="fb n" id="c2">Tutup</button></div></dialog>
 
 <script>
-// URL Web App Google Apps Script Anda sudah terpasang otomatis
 const API_URL = "https://script.google.com/macros/s/AKfycbw_mgfhp22-2B-05tqHvvh3s7C69oPYr8i2AyxVx704y1SndFZPVWQQ27X2qWK0PYbs/exec";
 
 document.addEventListener("DOMContentLoaded", function() {
-const VER = "2026-11-25.Vercel";
+const VER = "2026-11-25.AnalisisSoal";
 const $ = i => document.getElementById(i);
 const on = (i, ev, fn) => { const el = $(i); if (el) el[ev] = fn; };
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -292,7 +294,6 @@ let DB = { ident: { nama: "PLATFORM TKA", sub: "SMP/MTs 2026", logo: "" }, users
 let SES, PAY, ls = 0, lf = 0, LIVE = {}, HASIL = [], q0 = Promise.resolve();
 const OFF = () => 20000;
 
-// Pemanggil API ke Google Apps Script (mendukung Vercel via fetch & Apps Script langsung)
 const isGS = !!(window.google && google.script && google.script.run);
 async function rpc(fn, ...args) {
   if (isGS) {
@@ -586,7 +587,7 @@ const hs = () => HASIL;
 const fmt = x => { x = Math.max(0, x || 0); const z = n => String(n).padStart(2, "0"); return z(Math.floor(x / 3600)) + ":" + z(Math.floor(x % 3600 / 60)) + ":" + z(x % 60); };
 const gv = i => $(i).value.trim(), mapels = () => [...new Set(DB.soal.map(q => q.mapel))];
 const MENU = [["dash", "Dasbor"], ["users", "Data Pengguna"], ["soal", "Master Soal"], ["ujian", "Ujian"], ["token", "Token Ujian"], ["sesi", "Sesi Ujian"], ["kartu", "Kartu Ujian"], ["mon", "Monitor Live"], ["hasil", "Hasil dan Cetak"], ["ident", "Identitas Ujian"]];
-let page = "dash", F = { m: "", p: "", hm: "", ht: "", ks: "" }, mon;
+let page = "dash", F = { m: "", p: "", hm: "", hp: "", ht: "", ks: "" }, mon;
 
 function nav(p) {
   page = p; tmpLogo = undefined; clearInterval(mon);
@@ -622,9 +623,58 @@ const P = {
     return '<div class="bar noprint"><select data-f="ks"><option value="">Semua sesi</option>' + DB.sesi.map(z => '<option value="' + z.id + '"' + (F.ks === z.id ? " selected" : "") + '>' + esc(z.nm) + '</option>').join("") + '</select><button class="b" data-a="prt">Cetak kartu</button><button class="b d" data-a="skc">Hapus sandi tercetak</button><span class="mu">' + C.length + ' kartu</span></div><div class="cards">' + C.map(({ s: x, z }) => { const e = z && DB.ujian.find(y => y.id === z.e); return '<div class="kt"><div class="kh"><b>KARTU UJIAN</b><span style="display:flex;gap:6px;align-items:center">' + (DB.ident.logo ? '<img src="' + DB.ident.logo + '" alt="" style="height:26px">' : "") + esc(DB.ident.nama) + '</span></div><table class="kd"><tr><td>Nama</td><td>' + esc(x.n) + '</td></tr><tr><td>Kelas</td><td>' + esc(x.k || "-") + '</td></tr><tr><td>Username</td><td><b>' + esc(x.u) + '</b></td></tr><tr><td>Kata sandi</td><td><b>' + esc(x.p || "-") + '</b></td></tr><tr><td>Mata uji</td><td>' + (e ? esc(e.mapel) + " (Paket " + e.paket + ")" : "-") + '</td></tr><tr><td>Sesi</td><td>' + (z ? esc(z.nm) : "-") + '</td></tr><tr><td>Tanggal</td><td>' + (z ? esc(z.tgl) : "-") + '</td></tr><tr><td>Jam mulai</td><td>' + (z ? esc(z.jam) : "-") + '</td></tr></table><p class="mu" style="margin:6px 0 0">Token ujian diberikan oleh proktor di ruang ujian.</p></div>'; }).join("") + '</div>';
   },
   hasil() {
-    const H = hs(), M = [...new Set(H.map(h => h.m))], T = [...new Set(H.filter(h => !F.hm || h.m === F.hm).flatMap(h => h.d.map(x => x[0])))];
-    const R = H.filter(h => !F.hm || h.m === F.hm).map(h => { const d = F.ht ? h.d.filter(x => x[0] === F.ht) : h.d, b = d.reduce((a, x) => a + x[1], 0); return { ...h, bb: b, tt: d.length, nl: d.length ? Math.round(b / d.length * 100) : 0 }; }).filter(r => r.tt > 0);
-    return '<div class="bar noprint"><select data-f="hm"><option value="">Semua mapel</option>' + opts(M, F.hm) + '</select><select data-f="ht"><option value="">Semua topik</option>' + opts(T, F.ht) + '</select><button class="b" data-a="prt">Cetak</button><button class="b" data-a="xls">Ekspor ke Google Sheets</button></div><h3>Rekap hasil ' + esc(F.hm || "semua mata pelajaran") + (F.ht ? " – topik " + esc(F.ht) : "") + '</h3><table><tr><th>#</th><th>Username</th><th>Nama</th><th>Kelas</th><th>Mapel</th><th>Paket</th><th>Benar</th><th>Salah</th><th>Nilai</th></tr>' + (R.length ? R.map((r, i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(r.u) + '</td><td>' + esc(r.n) + '</td><td>' + esc(r.k) + '</td><td>' + esc(r.m) + '</td><td>' + r.p + '</td><td>' + r.bb + '</td><td>' + (r.tt - r.bb) + '</td><td><b>' + r.nl + '</b></td></tr>').join("") : '<tr><td colspan="9">Belum ada hasil.</td></tr>') + '</table>';
+    const H = hs();
+    const M = [...new Set([...H.map(h => h.m), ...mapels()])];
+    const T = [...new Set(H.filter(h => (!F.hm || h.m === F.hm) && (!F.hp || String(h.p) === F.hp)).flatMap(h => h.d.map(x => x[0])))];
+    const Hsub = H.filter(h => (!F.hm || h.m === F.hm) && (!F.hp || String(h.p) === F.hp));
+    const R = Hsub.map(h => {
+      const d = F.ht ? h.d.filter(x => x[0] === F.ht) : h.d;
+      const b = d.reduce((a, x) => a + x[1], 0);
+      return { ...h, bb: b, tt: d.length, nl: d.length ? Math.round(b / d.length * 100) : 0 };
+    }).filter(r => r.tt > 0);
+
+    // Hitung Analisis Butir Soal per Nomor
+    let analisisHtml = "";
+    if (F.hm) {
+      const targetPaket = F.hp ? Number(F.hp) : (Hsub.length ? Hsub[0].p : 1);
+      const Rpaket = H.filter(h => h.m === F.hm && Number(h.p) === targetPaket);
+      const bankSoal = DB.soal.filter(q => q.mapel === F.hm && Number(q.paket) === targetPaket);
+      const maxNo = Math.max(bankSoal.length, ...Rpaket.map(h => h.d.length), 0);
+
+      if (Rpaket.length && maxNo > 0) {
+        const rowsA = [];
+        for (let idx = 0; idx < maxNo; idx++) {
+          let bCount = 0, sCount = 0, topikNama = bankSoal[idx] ? bankSoal[idx].topik : "-";
+          Rpaket.forEach(h => {
+            if (h.d[idx] !== undefined) {
+              if (!bankSoal[idx] && h.d[idx][0]) topikNama = h.d[idx][0];
+              if (Number(h.d[idx][1]) === 1) bCount++; else sCount++;
+            }
+          });
+          const totPeserta = bCount + sCount;
+          if (!totPeserta) continue;
+          const pct = Math.round((bCount / totPeserta) * 100);
+          const barColor = pct >= 70 ? "#198754" : (pct >= 40 ? "#f59e0b" : "#d92638");
+          const katBadge = pct >= 70 ? '<span class="badge-tp bs">Mudah (' + pct + '%)</span>' : (pct >= 40 ? '<span class="badge-tp pgk">Sedang (' + pct + '%)</span>' : '<span class="badge-tp rd">Sukar (' + pct + '%)</span>');
+          const teksSoal = bankSoal[idx] ? esc(bankSoal[idx].t.length > 85 ? bankSoal[idx].t.slice(0, 85) + "…" : bankSoal[idx].t) : '<span class="mu">(Soal telah dihapus dari Master Soal)</span>';
+          rowsA.push('<tr><td><b>' + (idx + 1) + '</b></td><td>' + esc(topikNama) + '</td><td>' + teksSoal + '</td><td style="color:var(--gn);font-weight:700">' + bCount + '</td><td style="color:var(--rd);font-weight:700">' + sCount + '</td><td>' + totPeserta + '</td><td><div class="pbar"><div style="width:' + pct + '%;background:' + barColor + '"></div></div><div style="margin-top:4px">' + katBadge + '</div></td></tr>');
+        }
+        analisisHtml = '<hr style="border:0;border-top:2px solid var(--bd);margin:26px 0 18px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
+          '<h3 style="margin:0">Analisis Butir Soal – ' + esc(F.hm) + ' (Paket ' + targetPaket + ')</h3>' +
+          '<span class="mu">Total peserta dianalisis: <b>' + Rpaket.length + ' siswa</b></span></div>' +
+          '<table><tr><th>No Soal</th><th>Topik</th><th>Cuplikan Pertanyaan</th><th>Jawab Benar</th><th>Jawab Salah</th><th>Peserta</th><th>Ketuntasan & Tingkat Kesukaran</th></tr>' + rowsA.join("") + '</table>';
+      } else {
+        analisisHtml = '<hr style="border:0;border-top:2px solid var(--bd);margin:26px 0 18px"><h3>Analisis Butir Soal</h3><p class="mu">Belum ada peserta yang menyelesaikan ujian untuk <b>' + esc(F.hm) + ' (Paket ' + targetPaket + ')</b>.</p>';
+      }
+    } else {
+      analisisHtml = '<hr style="border:0;border-top:2px solid var(--bd);margin:26px 0 18px"><h3>Analisis Butir Soal</h3><p class="mu">Pilih <b>Mata Pelajaran</b> (dan Paket) pada filter di atas untuk menampilkan jumlah siswa yang menjawab benar dan salah pada setiap nomor soal.</p>';
+    }
+
+    return '<div class="bar noprint"><select data-f="hm"><option value="">Semua mapel</option>' + opts(M, F.hm) + '</select><select data-f="hp"><option value="">Semua paket</option>' + [1, 2, 3, 4].map(p => '<option value="' + p + '"' + (F.hp == p ? " selected" : "") + '>Paket ' + p + '</option>').join("") + '</select><select data-f="ht"><option value="">Semua topik</option>' + opts(T, F.ht) + '</select><button class="b" data-a="prt">Cetak</button><button class="b" data-a="xls">Ekspor ke Google Sheets</button></div>' +
+      '<h3>Rekap Nilai Siswa – ' + esc(F.hm || "Semua Mata Pelajaran") + (F.hp ? " (Paket " + F.hp + ")" : "") + (F.ht ? " · Topik " + esc(F.ht) : "") + '</h3>' +
+      '<table><tr><th>#</th><th>Username</th><th>Nama</th><th>Kelas</th><th>Mapel</th><th>Paket</th><th>Benar</th><th>Salah</th><th>Nilai</th></tr>' + (R.length ? R.map((r, i) => '<tr><td>' + (i + 1) + '</td><td>' + esc(r.u) + '</td><td>' + esc(r.n) + '</td><td>' + esc(r.k) + '</td><td>' + esc(r.m) + '</td><td>' + r.p + '</td><td>' + r.bb + '</td><td>' + (r.tt - r.bb) + '</td><td><b>' + r.nl + '</b></td></tr>').join("") : '<tr><td colspan="9">Belum ada hasil.</td></tr>') + '</table>' +
+      analisisHtml;
   }
 };
 
@@ -762,7 +812,7 @@ function act(a, i) {
     case "ilg": DB.ident.logo = ""; tmpLogo = undefined; save(); applyIdent(); nav(page); break;
     case "rst": { const x = lv()[i]; if (!x) return; ask("Reset " + esc(i) + "?", () => { rpc("apiReset", SES, i, x.m, x.p).then(() => { $("dm").close(); nav("mon"); }).catch(e => { $("dm").close(); $("sv").textContent = "Gagal reset: " + (e && e.message || e); }); }); break; }
     case "skc": ask("Hapus semua sandi tercetak dari sheet?", () => { DB.users.forEach(u => { u.p = ""; }); done(); }); break;
-    case "xls": { const sv = $("sv"); sv.textContent = "Membuat berkas di Google Drive..."; rpc("apiExportHasil", SES, { m: F.hm, t: F.ht }).then(r => { sv.textContent = ""; const a = document.createElement("a"); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Buka rekap (" + r.n + " baris). Unduh sebagai Excel atau PDF dari menu File."; sv.appendChild(a); }).catch(e => { sv.textContent = "Gagal: " + (e && e.message || e); }); break; }
+    case "xls": { const sv = $("sv"); sv.textContent = "Membuat berkas di Google Drive..."; rpc("apiExportHasil", SES, { m: F.hm, p: F.hp, t: F.ht }).then(r => { sv.textContent = ""; const a = document.createElement("a"); a.href = r.url; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Buka rekap & analisis (" + r.n + " baris). Unduh sebagai Excel atau PDF dari menu File."; sv.appendChild(a); }).catch(e => { sv.textContent = "Gagal: " + (e && e.message || e); }); break; }
     case "prt": window.print(); break;
   }
 }
@@ -794,7 +844,6 @@ document.addEventListener("change", e => {
 on("adm", "onclick", e => { e.preventDefault(); mapel = ""; go("v2"); if ($("u")) $("u").focus(); });
 on("alo", "onclick", () => { clearInterval(mon); $("u").value = ""; $("p").value = ""; go("v1"); });
 
-// Muat daftar ujian & identitas saat halaman dibuka
 rpc("apiPublic").then(r => {
   DB.ident = r.ident; applyIdent();
   if (!r.mapel.length) {
